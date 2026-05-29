@@ -1,0 +1,6 @@
+{
+  "name": "FlexiPOS",
+  "description": "Offline-first native business POS application supporting dynamic merchant profiles, smart camera barcode processing, and inventory management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

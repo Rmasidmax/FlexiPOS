@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual trigger of this workflow from GitHub UI
+
+jobs:
+  build:
+    name: Build & Artifact APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      # Sets up Gradle and caches dependencies automatically.
+      # Specifying gradle-version ensures it works perfectly even if the gradlew wrapper isn't in Git.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '9.3.1'
+
+      # Pre-create files to prevent the Secrets plugin or compiler from complaining about missing keys
+      - name: Create Environment Secrets and Keystore Mock
+        run: |
+          touch local.properties
+          touch .env
+          echo "MAP_API_KEY=mock_map_api_key" >> .env
+          echo "GEMINI_API_KEY=mock_gemini_api_key" >> .env
+
+          # Restore debug.keystore from base64 if it exists, otherwise generate a new one
+          if [ -f "debug.keystore.base64" ]; then
+            echo "Decoding debug.keystore.base64 back to debug.keystore..."
+            base64 -d debug.keystore.base64 > debug.keystore
+          else
+            echo "debug.keystore.base64 not found. Dynamically generating standard debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Build Debug APK
+        run: gradle :app:assembleDebug
+
+      - name: Locate and Upload Debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
